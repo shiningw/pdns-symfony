@@ -1,12 +1,22 @@
-=========
 
-A Symfony project created on November 5, 2019, 1:33 pm.
-# pdns-symfony
+this symfony bundle allows you to manage DNS zones and records through a web interface.If you have already installed and configured Powerdns properly, following the steps below will be all you need to do
+git clone https://github.com/shiningw/pdns-symfony
+cd pdns-symfony && composer update
 
-this symfony bundle allows you to manage DNS zones and records through a web interface.Follow the steps as follows to set it up
+mkdir -p var/data
+sudo chown www-data var/data
+#by default, it use sqlite. so please install php-sqlite
+php bin/console doctrine:schema:update --force
+php bin/console fos:user:create admin admin@xxxx.com YOURPASSWORD //this is the credentials to log in
+php bin/consle fos:user:promote admin ROLE_ADMIN
 
-1 install powerdns and enable its webapi
-2 git clone this repos and composer update
-3 you are ready to go!
+sudo chown -R www-data:www-data var/
+sudo chown -R www-data:www-data web/
+sudo -u www-data php bin/console assetic:dump
+
 
 demo: http://pdns.gizfun.com
+
+
+successfully tested on Ubuntu 16.04 with apache2.4.18 and php7.3
+

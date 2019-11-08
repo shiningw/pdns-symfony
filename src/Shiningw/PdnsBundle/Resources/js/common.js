@@ -612,8 +612,7 @@ HTMLTableRowElement.prototype.insertCell = (function (oldInsertCell) {
     return function (index) {
         if (this.parentElement.tagName.toUpperCase() == "THEAD") {
             if (index < -1 || index > this.cells.length) {
-                // This case is suppose to throw a DOMException, but we can't construct one
-                // Just let the real function do it.
+             
             } else {
                 let th = document.createElement("TH");
                 if (arguments.length == 0 || index == -1 || index == this.cells.length) {
