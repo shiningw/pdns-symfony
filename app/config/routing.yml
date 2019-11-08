@@ -1,0 +1,6 @@
+pdns:
+    resource: "@PdnsBundle/Resources/config/routing.yml"
+fos_user:
+    resource: "@FOSUserBundle/Resources/config/routing/all.xml"
+userbundle:
+    resource: "@UserBundle/Resources/config/routing.yml"

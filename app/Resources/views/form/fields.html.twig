@@ -1,0 +1,15 @@
+{# app/Resources/views/form/fields.html.twig #}
+{% block form_row %}
+{% spaceless %}
+    <div class="form-group {% if (not compound or force_error|default(false)) and not valid %} has-error{% endif %}">
+				{{ form_label(form) }}
+                {{ form_widget(form) }}
+                {% for attrname,attrvalue in attr %}
+                    {% if attrname == 'data-help' %}
+                        <span class="help-block">{{ attrvalue }}</span>
+                    {% endif %}
+                {% endfor %}
+				{{ form_errors(form) }}
+    </div>
+{% endspaceless %}
+{% endblock form_row %}

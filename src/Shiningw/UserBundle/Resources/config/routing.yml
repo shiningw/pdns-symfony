@@ -1,0 +1,6 @@
+fos_user_security_login:
+    path: /login
+    controller: Shiningw\UserBundle\Controller\SecurityController::loginAction
+fos_user_registration_register:
+    path: /register
+    controller: Shiningw\UserBundle\Controller\RegistrationController::registerAction

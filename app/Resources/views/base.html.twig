@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+         <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+        <title>{% block title %}Powerdns Web Management Interface!{% endblock %}</title>
+        {% block stylesheets %}{% endblock %}
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}" />
+    </head>
+    <body>
+        {% block body %}
+            <div>
+            {% set path_url = app.request.pathinfo %}	
+            {% if is_granted("IS_AUTHENTICATED_REMEMBERED") %}
+                {{ 'Hello, ' ~ app.user.username }}
+                <a href="{{ path('fos_user_security_logout') }}" class="btn btn-default" >
+                    <span class="glyphicon glyphicon-log-out"></span>{{ 'Logout'|trans({}, 'FOSUserBundle') }}
+                </a>
+            {% elseif path_url != '/login' %}
+                <a href="{{ path('fos_user_security_login') }}" class="btn btn-default btn-sm" >
+					<span class="glyphicon glyphicon-log-in"></span>{{ 'layout.login'|trans({}, 'FOSUserBundle') }}
+			   </a>
+            {% endif %}
+        </div>
+
+        {% if app.request.hasPreviousSession %}
+            {% for type, messages in app.session.flashbag.all() %}
+                {% for message in messages %}
+                    <div class="flash-{{ type }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
+
+        {% endblock %}
+        {% block javascripts %}
+        {% endblock %}
+    </body>
+</html>

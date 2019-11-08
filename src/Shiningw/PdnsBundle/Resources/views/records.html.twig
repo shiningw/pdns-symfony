@@ -1,0 +1,80 @@
+{% extends 'base.html.twig' %}
+{% use 'bootstrap.html.twig' %}
+
+{% block javascripts %}
+    {{parent()}}
+    <script src="{{ asset('assets/bootstrap3-editable/js/bootstrap-editable.js') }}"></script>   
+    {% javascripts '@PdnsBundle/Resources/js/common.js'
+                   '@PdnsBundle/Resources/js/editable-custom.js'
+                    '@PdnsBundle/Resources/js/record.js' %}
+    <script src="{{ asset_url }}"></script>
+    {% endjavascripts %}
+
+{% endblock %}
+
+{% block stylesheets %}
+    {{parent()}}
+    <link href="{{ asset('assets/bootstrap3-editable/css/bootstrap-editable.css') }}" rel="stylesheet" />
+    {% stylesheets '@PdnsBundle/Resources/css/pdns.css' %}
+    <link rel="stylesheet" href="{{ asset_url }}" />    
+    {% endstylesheets %}
+{% endblock %}
+
+{% block body %}
+    {% if(app.environment == 'dev') %}
+        {% set ajaxurl = '/app_dev.php/pdns/record/update' %}
+        {% set urlprefix = '/app_dev.php' %}
+    {% else %}
+        {% set ajaxurl = '/pdns/record/update' %}
+        {% set urlprefix = '' %}
+    {% endif %}
+
+    {#{{dump(data)}}#}
+    {{parent()}}
+
+        <div class="pdns-status-message">
+            <div class="alert">
+                <a href="#" class="close" data-dismiss="alert">&times;</a>
+                <span></span>
+            </div>
+        </div>
+<div id="dns-record-sets">
+    <div id="new-record-container">
+        <button type="button" class="btn btn-default btn-sm new-record"><span class="glyphicon glyphicon-plus"></span>Add</button>
+        <a href="{{ urlprefix }}/pdns/zones" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-arrow-left"></span>Back to Zones</a>
+
+    </div>
+
+    <table id="record-{{zone_id}}" class="table table-content table-bordered table-condensed table-hover stickyHeader rrsets">
+        <thead>
+            <tr>
+                <th class="name" >Name</th>
+                <th class="type" >Type </th>
+                <th class="ttl">TTL</th>
+                <th class="content">Content</th>
+                <th class="actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="dns-record-data">
+            {% block tablerow %}
+                {% for row,value in data %}
+                    <tr class="primary {%if data|length == (row + 1) %} last-row {% endif %}">
+                        <td class="name"><a href="#" data-name="name" data-type="text" data-pk="{{value.id}}" data-url="{{ajaxurl}}" data-title="Enter dns type">{{value.name}}</a></td>
+                        <td class="dnstype">{{value.type}}</td>
+                        <td class="ttl" ><a href="#" data-type="text" data-name="ttl" data-pk="{{value.id}}" data-url="{{ajaxurl}}" data-title="Enter TTL VALUE">{{value.ttl}}</a></td>
+                        <td class="content"><a href="#" data-type="text" data-name="content" data-pk="{{value.id}}" data-url="{{ajaxurl}}" data-title="Enter TTL VALUE">{{value.content}}</a></span></td>
+                        <td class="actions">
+                            <button type="button" class="removal-button btn btn-default"><span class="glyphicon glyphicon-trash"></span>Delete</button>
+                            <button class="pdns-loading btn btn-default" type="button" style="display:none">Loading</button>
+                            {%if data|length == (row + 1) %}
+                                <button type="button" class="new-record btn btn-default"><span class="glyphicon glyphicon-plus">Add</span></button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {%if data|length == (row + 1) %} {% endif %}
+                {% endfor %}
+            {% endblock %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
