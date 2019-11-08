@@ -72,7 +72,7 @@
                 url: this.url,
             });
             resHandler = $.proxy(function (data, textStatus, xhr) {
-                if (data.code === 201 || data.code === 204) {
+                if (data.code >= 200 && data.code <= 204) {
                     $.pdns.message.show('.pdns-status-message', data.msg);
                     if (this.successHandler !== undefined && typeof this.successHandler == 'function')
                         this.successHandler();
