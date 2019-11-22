@@ -18,7 +18,8 @@ sudo chown -R www-data:www-data web/
 sudo -u www-data php bin/console assetic:dump
 ```
 demo: http://pdns.gizfun.com
-
+username:admin
+password:pdns12345678
 
 successfully tested on Ubuntu 16.04 with apache2.4.18 and php7.3
 
