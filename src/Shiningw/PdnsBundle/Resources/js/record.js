@@ -17,13 +17,14 @@
             {'value': 'SOA', 'text': 'SOA'},
             {'value': 'NS', 'text': 'NS'},
             {'value': 'AAAA', 'text': 'AAAA'},
+            {'value': 'TXT','text':'TXT'},
         ];
         var opt = {
             id: 'dnstype',
             data: source,
         };
         selectOpt.push(opt);
-        $("#dns-record-sets").tablerow({selector: 'tbody', mode: 'inline', select: selectOpt}).pdnsconfirm();
+        $("#dns-record-sets").tablerow({selector: 'tbody', mode: 'popup', select: selectOpt}).pdnsconfirm();
 
         $("body").on('change', '.popup-inputname,.inline-inputname', function (e) {
             var zonename = $.pdns.getZoneId();

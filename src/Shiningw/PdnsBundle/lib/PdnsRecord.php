@@ -143,6 +143,7 @@ class PdnsRecord extends PdnsApiBase {
         } else {
             $resp->msg = 'success';
         }
+        $resp->extra = $this->postData;
         return $resp;
     }
 

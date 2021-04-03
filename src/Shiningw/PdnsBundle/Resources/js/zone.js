@@ -11,11 +11,12 @@
      </td>\
      </tr>';
         var url = $.pdns.getUrlPrefix() + '/pdns/zone/create';
-        var callback = function(formdata,$tpl){
+        var callback = function (formdata, $tpl) {
             $tpl.find('.zone-id').text(formdata.zonename);
         }
-        $("#zone-table-list").tablerow({saveCallback:callback,newrowTpl:newrowTpl,ajaxurl:url,selector: 'tbody', mode: 'popup',input:input,target:".add-zone-button"}).zoneconfirm();
-         //$("#zone-table-list").zoneconfirm();
+        $("#zone-table-list").tablerow({saveCallback: callback, newrowTpl: newrowTpl, ajaxurl: url, selector: 'tbody', mode: 'popup', input: input, target: ".add-zone-button"}).zoneconfirm();
+        //$("#zonelist-table").zoneconfirm({selector: '.removal-button-zone'});
+
     });
 })(jQuery);
 

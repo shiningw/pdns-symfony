@@ -123,6 +123,21 @@ body {
     background-color: #000;
 }
 
+.userinfo {
+    float:left;
+}
+.logout-btn {
+    float:right;
+}
+
+.user-container {
+    border-bottom: 2px darkgray solid;
+}
+
+.user-container > .logout-btn {
+    margin-bottom: 2rem;
+}
+
 @media (min-width: 768px) {
     .popup-content {
         width: 600px;

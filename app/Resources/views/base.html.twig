@@ -11,10 +11,18 @@
             <div>
             {% set path_url = app.request.pathinfo %}	
             {% if is_granted("IS_AUTHENTICATED_REMEMBERED") %}
+            <div class="user-container">
+               <div class="userinfo">
                 {{ 'Hello, ' ~ app.user.username }}
+               </div>
+               <div class="logout-btn">
                 <a href="{{ path('fos_user_security_logout') }}" class="btn btn-default" >
                     <span class="glyphicon glyphicon-log-out"></span>{{ 'Logout'|trans({}, 'FOSUserBundle') }}
                 </a>
+               </div>
+                <div class="clearfix"></div>
+            </div>
+
             {% elseif path_url != '/login' %}
                 <a href="{{ path('fos_user_security_login') }}" class="btn btn-default btn-sm" >
 					<span class="glyphicon glyphicon-log-in"></span>{{ 'layout.login'|trans({}, 'FOSUserBundle') }}
