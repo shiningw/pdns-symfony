@@ -18,3 +18,4 @@
 web/js
 web/css
 **/nbproject
+.DS_Store

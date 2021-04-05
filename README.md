@@ -11,7 +11,7 @@ sudo chown www-data var/data
 #by default, it uses sqlite. so please install php-sqlite
 php bin/console doctrine:schema:update --force
 php bin/console fos:user:create admin admin@xxxx.com YOURPASSWORD //this is the credentials to log in\
-php bin/consle fos:user:promote admin ROLE_ADMIN
+php bin/console fos:user:promote admin ROLE_ADMIN
 
 sudo chown -R www-data:www-data var/
 sudo chown -R www-data:www-data web/

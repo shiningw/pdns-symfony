@@ -27,7 +27,6 @@ class PdnsController extends Controller
     public function zoneListAction(Request $request)
     {
 
-        //$this->pdnsApi = clone $api;
         $zones = $this->pdnsApi->listZones();
         $data = array();
 

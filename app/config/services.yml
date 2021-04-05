@@ -1,9 +1,7 @@
 # Learn more about services, parameters and containers at
 # https://symfony.com/doc/current/service_container.html
-parameters:
-    pdns_apikey: 'myapikey123'
-    ns_servers: ['ns1.gizfun.com','ns2.gizfun.com'] 
-    database_path: '%kernel.project_dir%/var/data/data.sqlite'
+imports:
+    - { resource: '../../app/config/pdns.yml' }
 
 services:
     # default configuration for services in *this* file
