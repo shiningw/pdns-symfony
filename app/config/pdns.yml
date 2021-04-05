@@ -1,0 +1,4 @@
+parameters:
+    pdns_apikey: myapikey123
+    ns_servers: [ns1.gizfun.com, ns2.gizfun.com]
+    database_path: '%kernel.project_dir%/var/data/data.sqlite'
