@@ -60,7 +60,7 @@
                 {% for row,value in data %}
                     <tr class="primary {%if data|length == (row + 1) %} last-row {% endif %}">
                         <td class="name"><a href="#" data-name="name" data-type="text" data-pk="{{value.id}}" data-url="{{ajaxurl}}" data-title="Enter dns type">{{value.name}}</a></td>
-                        <td class="dnstype">{{value.type}}</td>
+                        <td class="recordtype">{{value.type}}</td>
                         <td class="ttl" ><a href="#" data-type="text" data-name="ttl" data-pk="{{value.id}}" data-url="{{ajaxurl}}" data-title="Enter TTL VALUE">{{value.ttl}}</a></td>
                         <td class="content"><a href="#" data-type="text" data-name="content" data-pk="{{value.id}}" data-url="{{ajaxurl}}" data-title="Enter TTL VALUE">{{value.content|replace({'"':''})}}</a></span></td>
                         <td class="actions">

@@ -4,8 +4,14 @@ declare (strict_types = 1);
 
 namespace Shiningw\PdnsBundle\Controller;
 
+use Psr\Log\LoggerInterface;
+use Shiningw\PdnsBundle\lib\CreateRecord;
+use Shiningw\PdnsBundle\lib\Database;
+use Shiningw\PdnsBundle\lib\DeleteRecord;
+use Shiningw\PdnsBundle\lib\ListRecord;
 use Shiningw\PdnsBundle\lib\PdnsApi;
-use Shiningw\PdnsBundle\lib\PdnsRecord;
+use Shiningw\PdnsBundle\lib\UpdateRecord;
+use Shiningw\PdnsBundle\lib\Utils;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,12 +22,15 @@ class PdnsController extends Controller
     protected $pdnsApi;
     private $apiKey;
     private $nameServers;
+    private $ispMaps = array(1 => "ctcc", 2 => "cucc", 3 => "cmcc");
 
-    public function __construct(string $apiKey, array $nameServers)
+    public function __construct(string $apiKey, array $nameServers, Utils $util)
     {
         $this->apiKey = $apiKey;
         $this->nameServers = $nameServers;
         $this->pdnsApi = new PdnsApi($apiKey);
+        $this->db = new Database();
+        $this->tool = $util;
     }
 
     public function zoneListAction(Request $request)
@@ -29,7 +38,6 @@ class PdnsController extends Controller
 
         $zones = $this->pdnsApi->listZones();
         $data = array();
-
         foreach ($zones as $value) {
             $d['domain'] = $value->name;
             $d['kind'] = $value->kind;
@@ -45,54 +53,67 @@ class PdnsController extends Controller
 
     public function recordListAction($domain)
     {
-        $domain = trim($domain);
-        $data = $this->pdnsApi->setZoneID($domain)->listRecords();
-
-        return $this->render('PdnsBundle::records.html.twig', array('data' => $data, 'zone_id' => $this->pdnsApi->getZoneID()));
+        $domain = $this->tool->sanitize($domain);
+        if (!$this->tool->isDomainName($domain)) {
+            return new JsonResponse(array("msg" => "invalid domain"));
+        }
+        $instance = new ListRecord($this->apiKey, $domain);
+        $data = $instance->list();
+        return $this->render('PdnsBundle::records.html.twig', array('data' => $data, 'zone_id' => $domain));
     }
 
-    public function createAction(Request $request)
+    public function createAction(Request $request, LoggerInterface $logger)
     {
-        $name = $request->request->get('name');
-        $dnstype = $request->request->get('dnstype');
-        $content = $request->request->get('content');
+        $name = $this->tool->sanitize($request->request->get('name'));
+        $content = $this->tool->sanitize($request->request->get('content'));
+        $recordtype = trim($request->request->get('recordtype'));
         $ttl = $request->request->get('ttl');
+        $isp = $request->request->get('isp');
+        $zone_id = $this->tool->sanitize($request->request->get('zone_id'));
+        if (!$this->tool->isRecordType($recordtype)) {
+            return new JsonResponse(array("msg" => "invalid dns type"));
+        }
+        if (!$this->tool->isTTL($ttl)) {
+            return new JsonResponse(array("msg" => "invalid ttl"));
+        }
         //zone_id is the top-level domain name
-        $zone_id = $request->request->get('zone_id');
+        if (!$this->tool->isDomainName($zone_id)) {
+            return new JsonResponse(array("msg" => "invalid zone Name"));
+        }
         //append dot
-        if (in_array($dnstype, array('CNAME', 'MX', 'NS')) && (substr($content, -1, 1)) != '.') {
+        if (in_array(strtoupper($recordtype), array('CNAME', 'MX', 'NS')) && (substr($content, -1, 1)) != '.') {
             $content .= '.';
         }
-        if (strtoupper($dnstype) == 'TXT' && !in_array($content[0], array('"', "'"))) {
+        if (strtoupper($recordtype) == 'TXT' && !in_array($content[0], array('"', "'"))) {
             $content = '"' . $content . '"';
         }
         // add priority number if dns type is MX and the value is missing a number preceding the content
-        if (strtoupper($dnstype) == 'MX' && count(explode('/\s/', $content)) < 2) {
+        if (strtoupper($recordtype) == 'MX' && count(explode('/\s/', $content)) < 2) {
             $content = '10 ' . $content;
         }
-        //make name canonical
-        if (stripos($zone_id, $name) === false || strpos($name, '.') === false) {
-            //$name = implode('.', array($name, $zone_id));
-        }
-
-        $zoneData = $this->pdnsApi->setZoneID($zone_id)->loadZone();
-        $newrecord = new PdnsRecord($this->apiKey, $zone_id);
-        $newrecord->init($zoneData, $name, $dnstype);
+        //$zoneData = $this->pdnsApi->setZoneID($zone_id)->loadZone();
+        $newrecord = new CreateRecord($this->apiKey, $zone_id, null, $logger);
         $resp = $newrecord->setName($name)
-            ->setType($dnstype)
+            ->setType($recordtype)
             ->setTTL($ttl)
             ->setContent($content)
             ->create();
         if (!in_array($resp->code, array(200, 204))) {
             $resp->msg = json_decode($resp->data)->error;
         } else {
-            $resp->msg = sprintf("successfully added %s", $name);
+            if (substr($name, -1, 1) == '.') {
+                $name = substr($name, 0, -1);
+            }
+            $record_id = $this->db->getRecord($name, $content, $recordtype);
+            $ispData = array("record_id" => $record_id, "name" => $name, "isp" => $isp, "isp_name" => $this->ispMaps[$isp]);
+            $this->db->insertRecord($ispData);
+            $resp->msg = sprintf("successfully added %s %d", $name, $record_id);
         }
 
         return new JsonResponse($resp);
     }
 
-    public function updateAction(Request $request)
+    public function updateAction(Request $request, LoggerInterface $logger)
     {
 
         $record = $request->request->get('pk');
@@ -102,40 +123,41 @@ class PdnsController extends Controller
         $ttl = ($inputname == 'ttl') ? $value : $record['ttl'];
         $recordname = ($inputname == 'name') ? $value : $record['name'];
 
-        $zoneData = $this->pdnsApi->setZoneID($zone_id)->loadZone();
-        $newrecord = new PdnsRecord($this->apiKey, $zone_id);
-        $newrecord->init($zoneData, $record['name'], $record['type']);
-        $newrecord->updateType = $inputname;
+        $instance = new UpdateRecord($this->apiKey, $zone_id, null, $logger);
+        //$newrecord->load($zoneData, $record['name'], $record['type']);
+        $instance->updateType = $inputname;
         $content = $record['content'];
-        $dnstype = $record['type'];
-        if (strtoupper($dnstype) == 'TXT' && !in_array($value, array('"', "'"))) {
+        $recordtype = $record['type'];
+        if (strtoupper($recordtype) == 'TXT' && !in_array($value, array('"', "'"))) {
             $value = '"' . $value . '"';
         }
-        $data = $newrecord
-            ->setContent($content)
+        $data = $instance
+            ->setContent($content) //old content
+            ->settype($recordtype)
             ->setTTL($ttl)
             ->setName($record['name'])
             ->update($value);
-        $data->content = $record;
+
+        $data->content = $record;//for debug purpose
         return new JsonResponse($data);
     }
 
     public function deleteAction(Request $request)
     {
 
-        $name = trim($request->request->get('name'));
-        $dnstype = trim($request->request->get('dnstype'));
-        $content = trim($request->request->get('content'));
-        $zone_id = trim($request->request->get('zonename'));
-        if (strtoupper($dnstype) == 'TXT' && !in_array($content[0], array('"', "'"))) {
+        $name = $this->tool->sanitize($request->request->get('name'));
+        $recordtype = trim($request->request->get('recordtype'));
+        $content = $this->tool->sanitize($request->request->get('content'));
+        $zone_id = $this->tool->sanitize($request->request->get('zonename'));
+        if (strtoupper($recordtype) == 'TXT' && !in_array($content[0], array('"', "'"))) {
             $content = '"' . $content . '"';
         }
-        $zoneData = $this->pdnsApi->setZoneID($zone_id)->loadZone();
-        $newrecord = new PdnsRecord($this->apiKey, $zone_id);
-        $resp = $newrecord->init($zoneData, $name, $dnstype)->delete($content);
-
+        //$zoneData = $this->pdnsApi->setZoneID($zone_id)->loadZone();
+        $resp = (new DeleteRecord($this->apiKey, $zone_id))
+            ->setName($name)
+            ->setType($recordtype)
+            ->delete($content);
         return new JsonResponse($resp);
-
         //return $this->render('PdnsBundle::test.html.twig', array('data' => $pk));
     }
 
@@ -144,13 +166,13 @@ class PdnsController extends Controller
         foreach ($this->nameServers as $key => &$server) {
             $this->appendDot($server);
         }
-        $name = $request->request->get('zonename');
+        $zone_id = $this->tool->sanitize($request->request->get('zonename'));
 
-        if (!$this->checkDomain($name)) {
-            return new JsonResponse(array('msg' => 'Illegal Domain Name','code' => 444));
+        if (!$this->tool->isDomainName($zone_id)) {
+            return new JsonResponse(array('msg' => 'Illegal Domain Name', 'code' => 444));
         }
         $data = array(
-            'name' => $name,
+            'name' => $zone_id,
             'nameservers' => $this->nameServers,
             'kind' => 'Native',
             'masters' => array(),
@@ -162,12 +184,12 @@ class PdnsController extends Controller
 
     public function removeZone(Request $request)
     {
-        $zone_id = $request->request->get('zonename');
-        if ($this->checkDomain($zone_id)) {
+        $zone_id = $this->tool->sanitize($request->request->get('zonename'));
+        if ($this->tool->isDomainName($zone_id)) {
             $res = $this->pdnsApi->setZoneID($zone_id)->removeZone();
             return new JsonResponse($res);
         }
-        return new JsonResponse(array('msg' => 'invalid domain name','code' => 444));
+        return new JsonResponse(array('msg' => 'invalid domain name', 'code' => 444));
     }
 
     private function appendDot(&$name)
@@ -177,10 +199,4 @@ class PdnsController extends Controller
             $name .= '.';
         }
     }
-    protected function checkDomain($domain)
-    {
-        $regex = "/^([0-9A-Za-z]{1}[0-9A-Za-z]+[.]{1})+[a-zA-Z]+[.]?$/";
-        return (bool) preg_match($regex, $domain);
-    }
-
 }

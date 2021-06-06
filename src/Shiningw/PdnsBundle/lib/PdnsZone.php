@@ -5,14 +5,13 @@ namespace Shiningw\PdnsBundle\lib;
 class PdnsZone extends PdnsApiBase {
 
     protected $domain, $nameservers, $masters, $kind;
-    protected $zoneData;
+    protected $zoneData,$baseUrl;
 
-    public function __construct($apikey = NULL, $domain = null) {
-
-        parent::__construct();
-        $this->setApiKey($apikey);
+    public function __construct($apikey = NULL, $domain = null,$baseUrl = null) {
+        $this->baseUrl = $baseUrl?$baseUrl:'http://127.0.0.1:8081/api/v1/servers/localhost/zones';
+        parent::__construct($apikey);
         $this->domain = $domain;
-        $this->setBaseurl('http://127.0.0.1:8081/api/v1/servers/localhost/zones');
+        $this->setBaseurl();
     }
 
     public function setZoneData() {
@@ -40,11 +39,6 @@ class PdnsZone extends PdnsApiBase {
     public function setNameservers($nameservers) {
         $this->nameservers = $nameservers;
     }
-
-    protected function zoneTemplates() {
-        
-    }
-
     public function create($params = null) {
 
         if (isset($params)) {
@@ -66,14 +60,15 @@ class PdnsZone extends PdnsApiBase {
         if (empty($this->zoneData['name'])) {
             throw new \Exception("Domain name is missing");
         }
-        return $this->client->Request($this->baseUrl, 'POST', $this->zoneData);
+        $this->client->setMethod('PATCH');
+        return $this->client->Request($this->baseUrl, $this->zoneData);
     }
 
     public function listzones($zone = NULL) {
         if (isset($zone)) {
-            $url = sprintf('http://127.0.0.1:8081/api/v1/servers/localhost/zones/%s', $zone);
+            $url =$this->$baseUrl."/".$zone;
         } else {
-            $url = 'http://127.0.0.1:8081/api/v1/servers/localhost/zones';
+            $url = $this->baseUrl;
         }
         return $this->client->Request($url);
     }

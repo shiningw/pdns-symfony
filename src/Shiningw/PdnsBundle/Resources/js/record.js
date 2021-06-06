@@ -19,15 +19,23 @@
             {'value': 'AAAA', 'text': 'AAAA'},
             {'value': 'TXT','text':'TXT'},
         ];
-        var opt = {
-            id: 'dnstype',
+        var opt1 = {
+            id: 'recordtype',
             data: source,
+            name:"Record Type",
         };
-        selectOpt.push(opt);
+        var opt2 = {
+            id:"isp",
+            data:[{"value":1,"text":"电信"},{"value":2,"text":"联通"},{"value":3,"text":"移动"}],
+            name:"ISP"
+        }
+        selectOpt.push(opt1,opt2);
+
         $("#dns-record-sets").tablerow({selector: 'tbody', mode: 'popup', select: selectOpt}).pdnsconfirm();
 
         $("body").on('change', '.popup-inputname,.inline-inputname', function (e) {
             var zonename = $.pdns.getZoneId();
+            console.log(zonename);
             var value = $(this).val();
             //append zone id if the user does not enter it along with sub domain
             if (value.indexOf(zonename) === -1) {
@@ -64,7 +72,7 @@
         var options = {ajaxOptions: {
                 dataType: 'json',
             }};
-        // console.log($('.dnstype').editableform(options));
+        // console.log($('.recordtype').editableform(options));
         $('.content').editable({
             selector: 'a',
 

@@ -86,6 +86,7 @@ class RRSet {
     public function exportComments() {
         $ret = Array();
         foreach ($this->comments as $comment) {
+            file_put_contents(__DIR__."/comment2.txt",print_r($comment,true));
             array_push($ret, $comment->export());
         }
 

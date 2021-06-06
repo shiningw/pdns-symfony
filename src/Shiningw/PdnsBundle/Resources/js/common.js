@@ -199,7 +199,7 @@
   $.fn.tablerow.defaults.newrowTpl =
     '<tr class="primary last-row" id="updated-row" >\
                         <td class="name"><a href="#" data-type="text" data-pk="" data-url="/pdns/record/update" data-title="">[]</a></td>\
-                        <td class="dnstype"><span data-type="text" data-pk="" data-url="/pdns/record/update" data-title="Enter dns type">[]</span></td>\
+                        <td class="recordtype"><span data-type="text" data-pk="" data-url="/pdns/record/update" data-title="Enter dns type">[]</span></td>\
                         <td class="ttl" ><a href="#" data-type="text" data-pk="" data-url="/pdns/record/update" data-title="Enter TTL VALUE">[]</a></td>\
                         <td class="content"><a href="#" data-type="text" data-pk="" data-url="/pdns/record/update" data-title="Enter TTL VALUE">[]</a></td>\
                         <td class="actions">\
@@ -274,17 +274,19 @@
         var options = {};
         options.id = this.select[i].id;
         options.data = this.select[i].data;
+        options.name = this.select[i].name;
         select.push(this.createSelect(options));
       }
       return select;
     },
     createSelect: function (options) {
       var label = document.createElement("label");
-      var content = document.createTextNode(options.id);
+      var content = document.createTextNode(options.name);
       label.appendChild(content);
       var selectList = document.createElement("select");
       selectList.id = options.id;
       selectList.name = options.id;
+  
       for (var i = 0; i < options.data.length; i++) {
         var option = document.createElement("option");
         option.value = options.data[i].value;
@@ -349,8 +351,8 @@
     "</div>" +
     "</form>";
   $.fn.popupform.defaults.buttons =
-    '<button type="submit" class="popup-submit">ok</button>' +
-    '<button type="button" class="editable-cancel">cancel</button>';
+    '<button type="submit" class="popup-submit">OK</button>' +
+    '<button type="button" class="editable-cancel">Cancel</button>';
   var input = [];
   input.push({
     name: "content",
@@ -444,7 +446,7 @@
   $.fn.inlineform.defaults.template =
     '<tr>\
 				<td class="name" title="secondary domain name"><input id="name" class="inline-inputname" type="text" value="" ></td>\
-				<td class="dnstype"><select class="dns-options" id="dnstype"><option>A</option><option>AAAA</option><option>CNAME</option><option>MX</option><option>NS</option><option>TXT</option></select></td>\
+				<td class="recordtype"><select class="dns-options" id="recordtype"><option>A</option><option>AAAA</option><option>CNAME</option><option>MX</option><option>NS</option><option>TXT</option></select></td>\
 				<td class="ttl" ><input id="ttl" type="text" value="600"></td>\
 				<td class="content"><input id="content" type="text" value="10.10.10.10"></td>\
 				<td class="actions">\

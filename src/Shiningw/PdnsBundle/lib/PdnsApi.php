@@ -9,11 +9,11 @@ class PdnsApi extends PdnsApiBase {
     protected $zone;
     protected $zone_id;
 
-    public function __construct($apikey = null, $baseurl = null) {
-        parent::__construct($apikey, 'http://127.0.0.1:8081/api/v1');
-        //$this->zone = new ZoneBase();
+    public function __construct($apiKey = null, $baseUrl = null) {
+        parent::__construct($apiKey);
+        $this->apiKey = $apiKey;
+        $this->baseUrl = $baseUrl?$baseUrl:'http://127.0.0.1:8081/api/v1';
     }
-
     public function setZoneID($zone_id) {
         // append a dot to every zone id
         if (substr($zone_id, -1) != '.') {
@@ -62,7 +62,8 @@ class PdnsApi extends PdnsApiBase {
 
     public function createZone($zone) {
         $path = "/servers/localhost/zones";
-        $data = $this->client->Request($this->baseUrl . $path, 'POST', $zone);
+        $this->client->setMethod('POST');
+        $data = $this->client->Request($this->baseUrl . $path, $zone);
 
         if ($data->code > 205) {
             $data->msg = 'failure!!';
@@ -80,7 +81,8 @@ class PdnsApi extends PdnsApiBase {
 
         if (!isset($zone['serial']) || !is_int($zone['serial'])) {
             $path = '/servers/localhost/zones';
-            $res = $this->client->Request($this->baseUrl . $path, 'POST', $zonedata);
+            $this->setMethod('POST');
+            $res = $this->client->Request($this->baseUrl . $path, $zonedata);
             return $res->data;
         }
 
@@ -91,15 +93,17 @@ class PdnsApi extends PdnsApiBase {
             $path = $zone['url'];
         }
 
-        $requestUrl = 'http://127.0.0.1:8081' . $path;
-        $this->client->Request($requestUrl, 'PUT', $zonedata);
+        $address = substr($this->baseUrl,0,strpos($this->baseUrl,"/"));
+        $requestUrl = $address . $path;
+        $this->client->setMethod('PUT');
+        $this->client->Request($requestUrl, $zonedata);
         // Then, update the rrsets
         if (count($zone['rrsets']) > 0) {
 
             $content = Array('rrsets' => $zone['rrsets']);
             // file_put_contents('../var/textf.txt',  $requestUrl);
-
-            $data = $this->client->Request($requestUrl, 'PATCH', $content);
+            $this->setMethod('PATCH');
+            $data = $this->client->Request($requestUrl, $content);
         }
         if (!in_array($data->code, array(200, 204))) {
             $data->msg = json_decode($data->data)->error;
@@ -128,18 +132,9 @@ class PdnsApi extends PdnsApiBase {
 
     public function saveRRSets($rrsets) {
         $path = '/servers/localhost/zones/' . $this->zone_id;
-        $res = $this->client->request($this->baseUrl . $path, 'PATCH', array('rrsets' => $rrsets));
+        $this->client->setMethod('PATCH');
+        $res = $this->client->request($this->baseUrl . $path, array('rrsets' => $rrsets));
         return $res;
-    }
-
-    public function listRecords() {
-
-        $zone = $this->loadZone();
-
-        //return $zone;
-        $zonebase = new ZoneBase($zone);
-
-        return $zonebase->rrsets2records();
     }
 
 }

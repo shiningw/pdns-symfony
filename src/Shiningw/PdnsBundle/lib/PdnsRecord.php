@@ -4,142 +4,135 @@ namespace Shiningw\PdnsBundle\lib;
 
 use Shiningw\PdnsBundle\Zone\RRSet;
 
-class PdnsRecord extends PdnsApiBase {
+class PdnsRecord extends PdnsApiBase
+{
 
-    public $rrsets = array(), $records = array();
-    public $oldContent;
-    //a specific resource records set
-    public $rrset;
+    public $records = array();
+    //instance representing a specific resource records set
+    /* @RRSet Shiningw\PdnsBundle\Zone\RRSet */
+    public $RRSet;
 
-    public function __construct($apikey = NULL, $domain = null) {
+    // a collection of Resource Record Sets
+    protected $rrsets = array();
+    protected $baseUrl;
 
-        parent::__construct();
-        $this->setApiKey($apikey);
+    //a specific zone data including all resources records
+    protected $zoneData;
+
+    public function __construct($apiKey = null, $domain = null, $baseUrl = null)
+    {
+        $this->baseUrl = $baseUrl ? $baseUrl : 'http://127.0.0.1:8081/api/v1/servers/localhost/zones';
+        parent::__construct($apiKey);
         $this->domain = $domain;
-        $this->setBaseurl('http://127.0.0.1:8081/api/v1/servers/localhost/zones');
         $this->disabled = false;
         $this->ttl = 600;
         $this->setptr = false;
         $this->setChangeType = 'REPLACE';
+        $pdnsApi = new PdnsApi($apiKey);
+        $this->zoneData = $pdnsApi->setZoneID($domain)->loadZone();
+        $this->load($this->zoneData);
     }
 
-    public function init($data, $name = null, $type = null) {
+    public function load($data, $name = null, $type = null)
+    {
+
+        //keep the existing resource records
         if (isset($data['rrsets'])) {
             foreach ($data['rrsets'] as $rrset) {
-                $toadd = new RRSet($rrset['name'], $rrset['type']);
+                $RRSet = new RRSet($rrset['name'], $rrset['type']);
                 foreach ($rrset['comments'] as $comment) {
-                    $toadd->addComment($comment['content'], $comment['account'], $comment['modified_at']);
+                    $RRSet->addComment($comment['content'], $comment['account'], $comment['modified_at']);
                 }
                 foreach ($rrset['records'] as $record) {
-                    $toadd->addRecord($record['content'], $record['disabled']);
+                    $RRSet->addRecord($record['content'], $record['disabled']);
                 }
-                $toadd->setTtl($rrset['ttl']);
-                array_push($this->rrsets, $toadd);
+                $RRSet->setTtl($rrset['ttl']);
+                array_push($this->rrsets, $RRSet);
             }
         }
-
         if (isset($name) && isset($type)) {
-            //$name, $type, $content, $disabled = FALSE, $ttl = 3600, $setptr = FALSE
             $this->name = $name;
             $this->type = $type;
-            $this->rrset = $this->getRRSet();
+
+            //search within the existing rrsets to see if it has any rrset matching the name and type;
+            $this->RRSet = $this->searchRRSet($name, $type);
+        }
+        unset($this->zoneData);
+        return $this;
+    }
+
+    protected function searchRRSet($name, $type)
+    {
+        if (!isset($this->rrsets)) {
+            throw new \Exception("Please import data first");
+        }
+        foreach ($this->rrsets as $rrset) {
+            //a resource record can be identified by a different record name or record type
+            if ($rrset->name == $name && $rrset->type == $this->type) {
+                $this->RRSet = $rrset;
+                //return $rrset;
+            }
         }
         return $this;
     }
 
-    public function setName($name) {
+    public function setName($name)
+    {
         $this->name = $name;
         return $this;
     }
 
-    public function setType($type) {
+    public function setType($type)
+    {
         $this->type = $type;
         return $this;
     }
 
-    public function setTTL($ttl) {
+    public function setTTL($ttl = 600)
+    {
         $this->ttl = $ttl;
         return $this;
     }
 
-    public function setPTR($setptr) {
+    public function setPTR($setptr = false)
+    {
         $this->setptr = $setptr;
         return $this;
     }
 
-    public function setChangeType($changeType) {
+    public function setChangeType($changeType)
+    {
         $this->changeType = $changeType;
         return $this;
     }
 
-    public function setContent($content) {
+    public function setContent($content)
+    {
         $this->content = $content;
         return $this;
     }
 
-    public function setDisabled($bool) {
+    public function setDisabled($bool = false)
+    {
 
         $this->disabled = $bool;
         return $this;
     }
 
-    protected function preCreate() {
-        $rrset = $this->addRecord();
-
-        $this->postData = array('rrsets' => array($this->rrset->export()));
-
-        return $this;
+    public function deleteByContent($content)
+    {
+        $this->RRSet->deleteRecord($content);
+        $this->postData = array('rrsets' => array($this->RRSet->export()));
+        return $this->push();
     }
 
-    public function create() {
-        $this->preCreate();
-        return $this->execute();
-    }
-
-    protected function preUpdate() {
-
-        $this->rrset->deleteRecord($this->oldContent);
-        $this->addRecord();
-    }
-
-    public function update($value) {
-        // $this->name = $currRecord['name'];
-        //$this->type = $currRecord['type'];
-        //$this->content = $currRecord['content'];
-        $this->oldContent = $this->content;
-
-        if ($this->updateType == 'ttl') {
-            $this->ttl = $value;
-            //$this->rrset->setTTL($value);
-            //update records
-        } elseif ($this->updateType == 'content') {
-            $this->setContent($value);
-        } elseif ($this->updateType == 'name') {
-            //$this->rrset->setName($value);
-            //need to delete the existing record to change the name
-            $this->delete($this->content);
-            $this->setName($value);
-        }
-        $this->preUpdate();
-
-        $this->postData = array('rrsets' => array($this->rrset->export()));
-
-
-        return $this->execute();
-    }
-
-    public function delete($content) {
-        $this->rrset->deleteRecord($content);
-        $this->postData = array('rrsets' => array($this->rrset->export()));
-        return $this->execute();
-    }
-
-    protected function execute() {
-        $url = $this->baseUrl . '/' . $this->removeSubDomain($this->name);
-        $resp = $this->client->Request($url, 'PATCH', $this->postData);
+    protected function push()
+    {
+        $url = $this->baseUrl . '/' . $this->getZoneName($this->name);
+        $this->client->setMethod('PATCH');
+        $resp = $this->client->Request($url, $this->postData);
         if (!in_array($resp->code, array(200, 204))) {
-            $resp->msg = json_decode($resp->data)->error;
-            //$resp->msg = $this->postData;
+            $resp->msg = json_decode($resp->data);
         } else {
             $resp->msg = 'success';
         }
@@ -147,56 +140,31 @@ class PdnsRecord extends PdnsApiBase {
         return $resp;
     }
 
-    public function getRRSet() {
-        if (!isset($this->rrsets)) {
-            throw new \Exception("Please import data first");
-        }
-        foreach ($this->rrsets as $rrset) {
-            if ($rrset->name == $this->name && $rrset->type == $this->type) {
-                $this->rrset = $rrset;
-                return $rrset;
-            }
-        }
-
-        return false;
-    }
-
-    public function addRecord($checkdup = true) {
-        //$rrset = $this->getRRSet($this->name, $this->type);
-
-        if ($this->rrset) {
-            $this->rrset->addRecord($this->content, $this->disabled, $this->setptr);
-            $this->rrset->setTtl($this->ttl);
-            $this->rrset->setName($this->name);
+    protected function buildRRSet()
+    {
+        //if there already exists a resource record, just add more records.Otherwise,build a new RRSet object
+        if ($this->RRSet) {
+            $this->RRSet->addRecord($this->content, $this->disabled, $this->setptr);
+            $this->RRSet->setTtl($this->ttl);
+            $this->RRSet->setName($this->name);
         } else {
-            $this->addRRSet($this->name, $this->type, $this->content, $this->disabled, $this->ttl, $this->setptr);
+            $this->RRSet = new RRSet($this->name, $this->type, $this->content, $this->disabled, $this->ttl, $this->setptr);
         }
-        return $this->rrset;
-        //return $this->getRecord($name, $type, $content);
+        return $this->RRSet;
     }
 
-    private function addRRSet($name, $type, $content, $disabled = FALSE, $ttl = 3600, $setptr = FALSE) {
-        if (($rrset = $this->getRRSet($name, $type)) !== FALSE) {
-            try {
-                $rrset->addRecord($content, $disabled);
-            } catch (\Exception $e) {
-                echo "error: " . $e->getMessage();
-            }
-            return $rrset;
+    public function getRecord($name, $type, $content)
+    {
+        if (!isset($this->RRSet)) {
+            $this->searchRRSet($name, $type);
         }
-        $rrset = new RRSet($name, $type, $content, $disabled, $ttl, $setptr);
-        array_push($this->rrsets, $rrset);
-        $this->rrset = $rrset;
-        return $rrset;
-    }
+        $RRSet = $this->RRSet;
 
-    public function getRecord($name, $type, $content) {
-        $rrset = $this->getRRSet($name, $type);
-        foreach ($rrset->exportRecords() as $record) {
+        foreach ($RRSet->exportRecords() as $record) {
             if ($record['content'] == $content) {
-                $record['name'] = $rrset->name;
-                $record['ttl'] = $rrset->ttl;
-                $record['type'] = $rrset->type;
+                $record['name'] = $RRSet->name;
+                $record['ttl'] = $RRSet->ttl;
+                $record['type'] = $RRSet->type;
                 $id = json_encode($record);
                 $record['id'] = $id;
                 return $record;
@@ -204,14 +172,15 @@ class PdnsRecord extends PdnsApiBase {
         }
     }
 
-    public function rrsets2records() {
-        $ret = Array();
+    public function rrsets2records()
+    {
+        $ret = array();
 
-        foreach ($this->rrsets as $rrset) {
-            foreach ($rrset->exportRecords() as $record) {
-                $record['name'] = $rrset->name;
-                $record['ttl'] = $rrset->ttl;
-                $record['type'] = $rrset->type;
+        foreach ($this->rrsets as $RRSet) {
+            foreach ($RRSet->exportRecords() as $record) {
+                $record['name'] = $RRSet->name;
+                $record['ttl'] = $RRSet->ttl;
+                $record['type'] = $RRSet->type;
                 $id = json_encode($record);
                 $record['id'] = $id;
                 array_push($ret, $record);
@@ -221,7 +190,22 @@ class PdnsRecord extends PdnsApiBase {
         return $ret;
     }
 
-    public function isRecordExist() {
+    public function listRecords()
+    {
+        return $this->rrsets2records();
+    }
+
+    public function getZoneName($domain)
+    {
+        $domain = trim($domain, ".");
+        $domain = explode('.', $domain);
+        //$domain = array_slice($domain, -2, 2);
+        array_shift($domain);
+        return implode('.', $domain);
+    }
+
+    public function isRecordExist()
+    {
 
         $res = $this->client->Request($this->baseUrl . '/' . $this->domain);
         foreach ((json_decode($res->data)) as $records) {
@@ -237,14 +221,6 @@ class PdnsRecord extends PdnsApiBase {
         }
 
         return false;
-    }
-
-    public function removeSubDomain($domain) {
-        $domain = trim($domain, ".");
-        $domain = explode('.', $domain);
-        //$domain = array_slice($domain, -2, 2);
-         array_shift($domain);
-        return implode('.', $domain);
     }
 
 }

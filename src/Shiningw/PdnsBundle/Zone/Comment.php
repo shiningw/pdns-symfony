@@ -11,11 +11,11 @@ class Comment {
     }
 
     public function export() {
-        $ret;
-
+        $ret = array();
         $ret['content'] = $this->content;
         $ret['account'] = $this->account;
         $ret['modified_at'] = $this->modified_at;
+        return $ret;
     }
 
 }
