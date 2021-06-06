@@ -24,12 +24,7 @@
             data: source,
             name:"Record Type",
         };
-        var opt2 = {
-            id:"isp",
-            data:[{"value":1,"text":"电信"},{"value":2,"text":"联通"},{"value":3,"text":"移动"}],
-            name:"ISP"
-        }
-        selectOpt.push(opt1,opt2);
+        selectOpt.push(opt1);
 
         $("#dns-record-sets").tablerow({selector: 'tbody', mode: 'popup', select: selectOpt}).pdnsconfirm();
 

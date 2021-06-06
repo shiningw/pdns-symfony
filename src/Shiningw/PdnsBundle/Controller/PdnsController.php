@@ -22,7 +22,6 @@ class PdnsController extends Controller
     protected $pdnsApi;
     private $apiKey;
     private $nameServers;
-    private $ispMaps = array(1 => "ctcc", 2 => "cucc", 3 => "cmcc");
 
     public function __construct(string $apiKey, array $nameServers, Utils $util)
     {
@@ -104,10 +103,7 @@ class PdnsController extends Controller
             if (substr($name, -1, 1) == '.') {
                 $name = substr($name, 0, -1);
             }
-            $record_id = $this->db->getRecord($name, $content, $recordtype);
-            $ispData = array("record_id" => $record_id, "name" => $name, "isp" => $isp, "isp_name" => $this->ispMaps[$isp]);
-            $this->db->insertRecord($ispData);
-            $resp->msg = sprintf("successfully added %s %d", $name, $record_id);
+            $resp->msg = sprintf("successfully added %s", $name);
         }
 
         return new JsonResponse($resp);
