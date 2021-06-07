@@ -5,7 +5,7 @@ pdns.zonelist:
     path:     /pdns/zones
     defaults: { _controller: PdnsBundle:Pdns:zoneList }
 pdns.recordlist:
-    path:     /pdns/zones/{domain}
+    path:     /pdns/zones/{zone_id}
     defaults: { _controller: PdnsBundle:Pdns:recordList }
 pdns.updaterecord:
     path:     /pdns/record/update
@@ -22,4 +22,6 @@ pdns.newzone:
 pdns.removezone:
     path:    /pdns/zone/remove
     defaults: {_controller:Shiningw\PdnsBundle\Controller\PdnsController::removeZone }
-    
+pdns.search:
+    path:    /pdns/zone/remove
+    defaults: {_controller:Shiningw\PdnsBundle\Controller\PdnsController::search}

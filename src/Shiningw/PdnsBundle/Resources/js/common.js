@@ -65,11 +65,16 @@
       var request = $.ajax({
         type: "POST",
         data: this.data,
+        dataType: 'json',
         url: this.url,
+        error:function(xhr,textStatus, error){
+          console.log(xhr.responseText);
+        },
       });
      
       var resHandler = $.proxy(function (data, textStatus, xhr) {
         if (data.code >= 200 && data.code <= 204) {
+          
           $.pdns.message.show(".pdns-status-message", data.msg);
           if (
             this.successHandler !== undefined &&
@@ -526,7 +531,7 @@
         if (
           tablecell[key].innerText !== undefined &&
           tablecell[key].innerText.length >= 1 &&
-          /^[a-zA-Z0-9\.\"_-]*$/i.test(tablecell[key].innerText)
+          /^[a-zA-Z0-9\.\"_-\s]*$/i.test(tablecell[key].innerText)
         ) {
           data[tablecell[key].className] = tablecell[key].innerText;
         }

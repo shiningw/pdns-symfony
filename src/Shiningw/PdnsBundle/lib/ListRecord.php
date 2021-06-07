@@ -6,9 +6,9 @@ use Shiningw\PdnsBundle\Zone\RRSet;
 
 class ListRecord extends PdnsRecord
 {
-    public function __construct($apiKey = null, $domain = null, $baseUrl = null)
+    public function __construct($apiKey = null, $zone_id = null, $baseUrl = null)
     {
-        parent::__construct($apiKey, $domain, $baseUrl);
+        parent::__construct($apiKey, $zone_id, $baseUrl);
     }
 
     public function list(){

@@ -2,15 +2,16 @@
 
 namespace Shiningw\PdnsBundle\lib;
 
+use Shiningw\PdnsBundle\lib\Database;
 use Shiningw\PdnsBundle\Zone\RRSet;
 
-class PdnsRecord extends PdnsApiBase
+class PdnsRecord extends PdnsApi
 {
 
     public $records = array();
     //instance representing a specific resource records set
     /* @RRSet Shiningw\PdnsBundle\Zone\RRSet */
-    public $RRSet;
+    protected $RRSet = null;
 
     // a collection of Resource Record Sets
     protected $rrsets = array();
@@ -18,25 +19,32 @@ class PdnsRecord extends PdnsApiBase
 
     //a specific zone data including all resources records
     protected $zoneData;
+    //ISP code 1 = ctcc,2 = cucc,3= cmcc
+    public $isp = 1;
+    // current dns record name
+    public $name = null;
+    // current dns record type
+    public $type = null;
 
-    public function __construct($apiKey = null, $domain = null, $baseUrl = null)
+    public function __construct($apiKey = null, $zone_id = null, $baseUrl = null)
     {
-        $this->baseUrl = $baseUrl ? $baseUrl : 'http://127.0.0.1:8081/api/v1/servers/localhost/zones';
+        $this->baseUrl = $baseUrl ? $baseUrl : 'http://127.0.0.1:8081/api/v1';
         parent::__construct($apiKey);
-        $this->domain = $domain;
+        $this->zone_id = $zone_id;
+        $this->apiKey = $apiKey;
         $this->disabled = false;
         $this->ttl = 600;
         $this->setptr = false;
         $this->setChangeType = 'REPLACE';
-        $pdnsApi = new PdnsApi($apiKey);
-        $this->zoneData = $pdnsApi->setZoneID($domain)->loadZone();
+        $this->dbh = new Database();
+        $this->zoneData = $this->setZoneID($zone_id)->loadZone();
         $this->load($this->zoneData);
     }
 
     public function load($data, $name = null, $type = null)
     {
 
-        //keep the existing resource records
+        //convert existing resource records to a RRSet object
         if (isset($data['rrsets'])) {
             foreach ($data['rrsets'] as $rrset) {
                 $RRSet = new RRSet($rrset['name'], $rrset['type']);
@@ -50,14 +58,19 @@ class PdnsRecord extends PdnsApiBase
                 array_push($this->rrsets, $RRSet);
             }
         }
+        //search in the existing rrsets and save the rrset matching the name and type;
         if (isset($name) && isset($type)) {
-            $this->name = $name;
-            $this->type = $type;
-
-            //search within the existing rrsets to see if it has any rrset matching the name and type;
-            $this->RRSet = $this->searchRRSet($name, $type);
+            $this->setName($name);
+            $this->setType($type);
+            $this->searchRRSet($name, $type);
         }
         unset($this->zoneData);
+        return $this;
+    }
+
+    protected function setRRSet(RRSet $rrset)
+    {
+        $this->RRSet = $rrset;
         return $this;
     }
 
@@ -69,8 +82,7 @@ class PdnsRecord extends PdnsApiBase
         foreach ($this->rrsets as $rrset) {
             //a resource record can be identified by a different record name or record type
             if ($rrset->name == $name && $rrset->type == $this->type) {
-                $this->RRSet = $rrset;
-                //return $rrset;
+                $this->setRRSet($rrset);
             }
         }
         return $this;
@@ -122,22 +134,23 @@ class PdnsRecord extends PdnsApiBase
     public function deleteByContent($content)
     {
         $this->RRSet->deleteRecord($content);
-        $this->postData = array('rrsets' => array($this->RRSet->export()));
-        return $this->push();
+        return $this->saveRRSets($this->getRrset());
+
     }
 
     protected function push()
     {
-        $url = $this->baseUrl . '/' . $this->getZoneName($this->name);
-        $this->client->setMethod('PATCH');
-        $resp = $this->client->Request($url, $this->postData);
-        if (!in_array($resp->code, array(200, 204))) {
-            $resp->msg = json_decode($resp->data);
-        } else {
-            $resp->msg = 'success';
-        }
-        $resp->extra = $this->postData;
+        $resp = $this->saveRRSets($this->getRrset());
         return $resp;
+    }
+
+    //get rrset data and return it in an array
+    protected function getRrset()
+    {
+        if (!isset($this->RRSet)) {
+            throw new \Exception("RRSet object is empty");
+        }
+        return array($this->RRSet->export());
     }
 
     protected function buildRRSet()
@@ -195,32 +208,13 @@ class PdnsRecord extends PdnsApiBase
         return $this->rrsets2records();
     }
 
-    public function getZoneName($domain)
+    public function getZoneName($zone_id)
     {
-        $domain = trim($domain, ".");
-        $domain = explode('.', $domain);
-        //$domain = array_slice($domain, -2, 2);
-        array_shift($domain);
-        return implode('.', $domain);
-    }
-
-    public function isRecordExist()
-    {
-
-        $res = $this->client->Request($this->baseUrl . '/' . $this->domain);
-        foreach ((json_decode($res->data)) as $records) {
-            foreach ($records as $record) {
-                if (isset($record->name) && $record->name == $this->name) {
-                    foreach ($record->records as $value) {
-                        if ($value->content == $this->content) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        return false;
+        $zone_id = trim($zone_id, ".");
+        $zone_id = explode('.', $zone_id);
+        //$zone_id = array_slice($zone_id, -2, 2);
+        array_shift($zone_id);
+        return implode('.', $zone_id);
     }
 
 }

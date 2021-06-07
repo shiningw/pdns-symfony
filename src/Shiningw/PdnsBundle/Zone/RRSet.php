@@ -8,7 +8,7 @@ use Shiningw\PdnsBundle\Zone\Comment;
 class RRSet {
 
     public function __construct($name = '', $type = '', $content = null, $disabled
-    = FALSE, $ttl = 3600, $setptr = FALSE) {
+    = FALSE, $ttl = 600, $setptr = FALSE) {
         $this->name = $name;
         $this->type = $type;
         $this->ttl = $ttl;
@@ -31,6 +31,10 @@ class RRSet {
 
     public function setName($name) {
         $this->name = $name;
+    }
+
+    public function setType($type) {
+        $this->type = $type;
     }
 
     public function addRecord($content, $disabled = FALSE, $setptr = FALSE) {
@@ -86,7 +90,6 @@ class RRSet {
     public function exportComments() {
         $ret = Array();
         foreach ($this->comments as $comment) {
-            file_put_contents(__DIR__."/comment2.txt",print_r($comment,true));
             array_push($ret, $comment->export());
         }
 

@@ -1,76 +1,79 @@
 <?php
-
 namespace Shiningw\PdnsBundle\lib;
 
-class PdnsZone extends PdnsApiBase {
+use Shiningw\PdnsBundle\Zone\Zone;
 
-    protected $domain, $nameservers, $masters, $kind;
-    protected $zoneData,$baseUrl;
+class PdnsZone extends PdnsApi
+{
 
-    public function __construct($apikey = NULL, $domain = null,$baseUrl = null) {
-        $this->baseUrl = $baseUrl?$baseUrl:'http://127.0.0.1:8081/api/v1/servers/localhost/zones';
+    protected $zone_id, $nameservers, $masters, $kind;
+    protected $baseUrl;
+
+    public function __construct($apikey = null, $zone_id = null, $baseUrl = null)
+    {
         parent::__construct($apikey);
-        $this->domain = $domain;
-        $this->setBaseurl();
+        $this->baseUrl = $baseUrl ? $baseUrl : 'http://127.0.0.1:8081/api/v1';
+        $this->zone_id = $zone_id;
+        $this->zone = new Zone($zone_id);
     }
 
-    public function setZoneData() {
+    protected function setZoneData($params)
+    {
 
-        $this->zoneData = array(
-            'name' => $this->domain,
-            'kind' => $this->kind,
-            'masters' => $this->masters,
-            'nameservers' => $this->nameservers,
-        );
+        extract($params);
+        $this->setName($name);
+        $this->setKind($kind);
+        $this->setMasters($masters);
+        $this->setNameservers($nameservers);
     }
 
-    public function setDomain($domain) {
-        $this->domain = $domain;
+    public function setName($zone_id)
+    {
+        $this->zone->setName($zone_id);
+        $this->zone_id = $zone_id;
+        return $this;
     }
 
-    public function setKind($kind = 'Native') {
-        $this->kind = $kind;
+    public function setKind($kind = 'Native')
+    {
+        $this->zone->setKind($kind);
+        return $this;
     }
 
-    public function setMasters($masters) {
-        $this->masters = $masters;
+    public function export()
+    {
+        return $this->zone->export();
     }
 
-    public function setNameservers($nameservers) {
-        $this->nameservers = $nameservers;
+    public function setMasters($masters)
+    {
+        $this->zone->setMasters($masters);
+        return $this;
     }
-    public function create($params = null) {
 
+    public function setNameservers($nameservers)
+    {
+        $this->zone->setNameservers($nameservers);
+        return $this;
+    }
+    public function create($params = null)
+    {
         if (isset($params)) {
-            if (isset($params['domain'])) {
-                $this->setDomain($params['domain']);
-            }
-            if (isset($params['kind'])) {
-                $this->setKind($params['kind']);
-            }
-            if (isset($params['masters'])) {
-                $this->setMasters($params['masters']);
-            }
-            if (isset($params['nameservers'])) {
-                $this->setNameservers($params['nameservers']);
-            }
+            $this->setZoneData($params);
         }
-        $this->setZoneData();
 
-        if (empty($this->zoneData['name'])) {
+        if (empty($this->zone->name)) {
             throw new \Exception("Domain name is missing");
         }
-        $this->client->setMethod('PATCH');
-        return $this->client->Request($this->baseUrl, $this->zoneData);
+        return $this->createZone($this->export());
     }
 
-    public function listzones($zone = NULL) {
-        if (isset($zone)) {
-            $url =$this->$baseUrl."/".$zone;
-        } else {
-            $url = $this->baseUrl;
-        }
-        return $this->client->Request($url);
+    public function remove(){
+      return $this->removeZone();
+    }
+
+    public function list($zone = null) {
+        return  $this->listZones($zone);
     }
 
 }
