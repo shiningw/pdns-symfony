@@ -2,7 +2,6 @@
 
 namespace Shiningw\PdnsBundle\lib;
 
-use Shiningw\PdnsBundle\lib\Database;
 use Shiningw\PdnsBundle\Zone\RRSet;
 
 class PdnsRecord extends PdnsApi
@@ -36,7 +35,6 @@ class PdnsRecord extends PdnsApi
         $this->ttl = 600;
         $this->setptr = false;
         $this->setChangeType = 'REPLACE';
-        $this->dbh = new Database();
         $this->zoneData = $this->setZoneID($zone_id)->loadZone();
         $this->load($this->zoneData);
     }
@@ -135,7 +133,6 @@ class PdnsRecord extends PdnsApi
     {
         $this->RRSet->deleteRecord($content);
         return $this->saveRRSets($this->getRrset());
-
     }
 
     protected function push()
