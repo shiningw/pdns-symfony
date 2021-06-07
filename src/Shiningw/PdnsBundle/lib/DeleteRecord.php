@@ -15,9 +15,7 @@ class DeleteRecord extends PdnsRecord
     {
         // remove the trailling dot because record name is stored in the ISP table without the trailing dot.
         $name = trim($this->name, ".");
-        
-        //save the record id so we can delete the associated entry in the ISP table 
-        $record_id = $this->dbh->getRecordId($name, $content, $this->type);
+
         $resp = $this->searchRRSet($this->name, $this->type)->deleteByContent($content);
 
         if ($resp->ok) {
@@ -26,18 +24,11 @@ class DeleteRecord extends PdnsRecord
                 'content' => $content,
                 'type' => $this->type,
                 'zonename' => $this->zone_id,
-                'rid' => $record_id,
             );
            $event = new DeleteRecordEvent($eventData);
            $this->dispatcher->dispatch(DeleteRecordEvent::NAME, $event);
-            //$this->deleteISP($record_id);
         }
         return $resp;
-    }
-
-    protected function deleteISP($rid)
-    {
-        $this->dbh->delete($rid);
     }
 
 }

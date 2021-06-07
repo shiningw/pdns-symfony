@@ -34,11 +34,7 @@ class PdnsController extends Controller
         $this->nameServers = $nameServers;
         $this->tool = $util;
         $this->pdnszone = new PdnsZone($this->apiKey);
-        $new = new CreateRecordListener();
-        $delete = new DeleteRecordListener();
         $this->dispatcher = $dispatcher;
-        $this->dispatcher->addListener('dnsrecord.created', [$new, 'onCreate']);
-        $this->dispatcher->addListener('dnsrecord.deleted', [$delete, 'onDelete']);
     }
 
     public function zoneListAction(Request $request)
@@ -75,7 +71,6 @@ class PdnsController extends Controller
         $content = $this->tool->sanitize($request->request->get('content'));
         $recordtype = trim($request->request->get('recordtype'));
         $ttl = $request->request->get('ttl');
-        $isp = $request->request->get('isp');
         $zone_id = $this->tool->sanitize($request->request->get('zone_id'));
         if (!$this->tool->isRecordType($recordtype)) {
             return new JsonResponse(array("msg" => "invalid dns type"));
@@ -103,7 +98,6 @@ class PdnsController extends Controller
             ->setType($recordtype)
             ->setTTL($ttl)
             ->setContent($content)
-            ->setISP($isp)
             ->create();
         return new JsonResponse($resp);
     }

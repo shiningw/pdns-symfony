@@ -34,7 +34,6 @@ class UpdateRecord extends PdnsRecord
             ->setName($oldName)
             ->setType($this->type)
             ->delete($oldContent);
-     
         //build a resource record object
        // $this->buildRrset();
         $new = new CreateRecord($this->apiKey, $this->zone_id, null, $this->dispatcher);
@@ -43,7 +42,6 @@ class UpdateRecord extends PdnsRecord
             ->setName($this->name)
             ->setTTL($this->ttl)
             ->setContent($this->content)
-            ->setISP(1)
             ->create();
     }
 }

@@ -23,12 +23,6 @@ class CreateRecord extends PdnsRecord
         return $this;
     }
 
-    public function setISP($isp)
-    {
-        $this->isp = $isp;
-        return $this;
-    }
-
     public function create()
     {
         $this->preCreate();
