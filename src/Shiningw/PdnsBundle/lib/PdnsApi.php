@@ -2,19 +2,29 @@
 
 namespace Shiningw\PdnsBundle\lib;
 
-use Shiningw\PdnsBundle\Zone\ZoneBase;
-
-class PdnsApi extends PdnsApiBase {
+class PdnsApi extends PdnsApiBase
+{
 
     protected $zone;
     protected $zone_id;
+    protected $path;
+    protected $searchData;
 
-    public function __construct($apiKey = null, $baseUrl = null) {
+    public function __construct($apiKey = null, $baseUrl = null)
+    {
         parent::__construct($apiKey);
         $this->apiKey = $apiKey;
-        $this->baseUrl = $baseUrl?$baseUrl:'http://127.0.0.1:8081/api/v1';
+        $this->baseUrl = $baseUrl ? $baseUrl : 'http://127.0.0.1:8081/api/v1';
+        $this->path = "/servers/localhost/zones";
+        $this->zoneUrl = $this->getZoneUrl();
     }
-    public function setZoneID($zone_id) {
+
+    public function getZoneUrl()
+    {
+        return sprintf("%s%s", $this->baseUrl, $this->path);
+    }
+    public function setZoneID($zone_id)
+    {
         // append a dot to every zone id
         if (substr($zone_id, -1) != '.') {
             $zone_id .= '.';
@@ -23,69 +33,70 @@ class PdnsApi extends PdnsApiBase {
         return $this;
     }
 
-    public function getZoneID() {
+    public function setBaseUrl($url)
+    {
+        $this->baseUrl = $url;
+        return $this;
+    }
+
+    public function setPath($path)
+    {
+        $this->path = $path;
+        return $this;
+    }
+
+    public function getZoneID()
+    {
         return $this->zone_id;
     }
 
-    public function listZones($q = FALSE) {
+    public function listZones($q = false)
+    {
 
-        if ($q) {
-            $path = "/servers/localhost/search-data?q=*" . $q . "*&max=25";
-            $res = $this->client->Request($this->baseUrl . $path);
-            $ret = Array();
-            $seen = Array();
-
-            foreach ($res->data as $result) {
-                if (isset($seen[$result['zone_id']])) {
-                    continue;
-                }
-                $zone = $this->loadzone($result['zone_id']);
-                unset($zone['rrsets']);
-                array_push($ret, $zone);
-                $seen[$result['zone_id']] = 1;
-            }
-
-            return $ret;
-        }
-        $path = "/servers/localhost/zones";
-        $res = $this->client->Request($this->baseUrl . $path);
-
+        $res = $this->send($this->baseUrl . $this->path);
         return json_decode($res->data);
     }
 
-    public function loadZone() {
-        $path = "/servers/localhost/zones/" . $this->zone_id;
-        $res = $this->client->Request($this->baseUrl . $path);
+    public function search(string $string)
+    {
+        $data = null;
+        if ($string) {
+            $path = "/servers/localhost/search-data?q=*" . $q . "*&max=25&object_type=record";
+            $resp = $this->send($this->baseUrl . $path);
 
-        return json_decode($res->data, 1);
-    }
-
-    public function createZone($zone) {
-        $path = "/servers/localhost/zones";
-        $this->client->setMethod('POST');
-        $data = $this->client->Request($this->baseUrl . $path, $zone);
-
-        if ($data->code > 205) {
-            $data->msg = 'failure!!';
-        } else {
-            $data->msg = 'success';
+            if ($resp->code == 200 && isset($resp->data)) {
+                $data = json_decode($resp->data, 1);
+            }
+            $this->searchData = $data;
         }
         return $data;
     }
 
-    public function saveZone($zone) {
+    public function loadZone()
+    {
+        $path = $this->path . "/" . $this->zone_id;
+        $res = $this->send($this->getZoneUrl() . "/" . $this->zone_id);
+        return json_decode($res->data, 1);
+    }
+
+    public function createZone($zone)
+    {
+        $resp = $this->send($this->baseUrl . $this->path, $zone, "POST");
+        return $this->getResponse($resp);
+    }
+
+    public function saveZone($zone)
+    {
         $zonedata = $zone;
         unset($zonedata['id']);
         unset($zonedata['url']);
         unset($zonedata['rrsets']);
 
         if (!isset($zone['serial']) || !is_int($zone['serial'])) {
-            $path = '/servers/localhost/zones';
             $this->setMethod('POST');
-            $res = $this->client->Request($this->baseUrl . $path, $zonedata);
+            $res = $this->client->Request($this->baseUrl . $this->path, $zonedata);
             return $res->data;
         }
-
 
         if (is_string($zone['url']) && $zone['url'][0] != '/') {
             $path = '/' . $zone['url'];
@@ -93,48 +104,54 @@ class PdnsApi extends PdnsApiBase {
             $path = $zone['url'];
         }
 
-        $address = substr($this->baseUrl,0,strpos($this->baseUrl,"/"));
+        $address = substr($this->baseUrl, 0, strpos($this->baseUrl, "/"));
         $requestUrl = $address . $path;
-        $this->client->setMethod('PUT');
-        $this->client->Request($requestUrl, $zonedata);
+        $this->send($requestUrl, $zonedata, "PUT");
         // Then, update the rrsets
         if (count($zone['rrsets']) > 0) {
-
-            $content = Array('rrsets' => $zone['rrsets']);
-            // file_put_contents('../var/textf.txt',  $requestUrl);
-            $this->setMethod('PATCH');
-            $data = $this->client->Request($requestUrl, $content);
-        }
-        if (!in_array($data->code, array(200, 204))) {
-            $data->msg = json_decode($data->data)->error;
-        } else {
-            $data->msg = 'success';
+            $content = array('rrsets' => $zone['rrsets']);
+            $resp = $this->send($requestUrl, $content, "PATCH");
         }
 
-        return $data;
-        return $this->loadzone($zone['id']);
+        return $this->getResponse($resp);
+        //return $this->loadzone($zone['id']);
     }
 
-    public function removeZone() {
-        $path = "/servers/localhost/zones/" . $this->zone_id;
+    public function removeZone()
+    {
+        $path = $this->path . "/" . $this->zone_id;
         $requestUrl = $this->baseUrl . $path;
-
-        $data = $this->client->Request($requestUrl, 'DELETE');
-
-        if (!in_array($data->code, array(200, 204))) {
-            $data->msg = json_decode($data->data)->error;
-        } else {
-            $data->msg = 'success';
-        }
-
-        return $data;
+        return $this->getResponse($this->send($requestUrl, null, "DELETE"));
     }
 
-    public function saveRRSets($rrsets) {
-        $path = '/servers/localhost/zones/' . $this->zone_id;
-        $this->client->setMethod('PATCH');
-        $res = $this->client->request($this->baseUrl . $path, array('rrsets' => $rrsets));
-        return $res;
+    protected function getResponse($resp)
+    {
+        if (!in_array($resp->code, array(200, 201, 204))) {
+            $msg = json_decode($resp->data);
+            if (isset($msg->error)) {
+                $resp->msg = $msg->error;
+            }
+            $resp->ok = 0;
+        } else {
+            $resp->msg = 'Success';
+            $resp->ok = 1;
+        }
+        return $resp;
+    }
+    public function send(string $url, array $data = null, string $method = null)
+    {
+        if (isset($method)) {
+            $this->client->setMethod($method);
+        }
+        return $this->client->Request($url, $data);
+    }
+
+    public function saveRRSets(array $rrsets)
+    {
+        $url = $this->getZoneUrl() . "/" . $this->zone_id;
+        $postData = array('rrsets' => $rrsets);
+        $resp = $this->send($url, $postData, "PATCH");
+        return $this->getResponse($resp);
     }
 
 }
