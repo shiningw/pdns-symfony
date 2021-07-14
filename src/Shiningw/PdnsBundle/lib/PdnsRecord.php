@@ -131,8 +131,12 @@ class PdnsRecord extends PdnsApi
 
     public function deleteByContent($content)
     {
-        $this->RRSet->deleteRecord($content);
-        return $this->saveRRSets($this->getRrset());
+        if (isset($this->RRSet) && $this->RRSet instanceof RRSet) {
+            $this->RRSet->deleteRecord($content);
+            return $this->saveRRSets($this->getRrset());
+        }
+        $resp = (object) array("ok" => 0, "msg" => "No matching Record!");
+        return $resp;
     }
 
     protected function push()

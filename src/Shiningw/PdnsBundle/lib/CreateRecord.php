@@ -16,7 +16,7 @@ class CreateRecord extends PdnsRecord
 
     protected function preCreate()
     {
-        
+
         $this->searchRRSet($this->name, $this->type)->buildRRSet();
         //$this->RRSet->addComment("test comment","user");
         $this->postData = array('rrsets' => array($this->RRSet->export()));
@@ -29,7 +29,10 @@ class CreateRecord extends PdnsRecord
         $resp = $this->push();
 
         if (!in_array($resp->code, array(200, 204))) {
-            $resp->msg = json_decode($resp->data)->error;
+            $msg = json_decode($resp->data);
+            if (isset($msg->error)) {
+                $resp->msg = $msg->error;
+            }
         } else {
             $name = trim($this->name, ".");
             $this->setName($name);

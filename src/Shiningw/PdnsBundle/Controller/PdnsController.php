@@ -68,6 +68,7 @@ class PdnsController extends Controller
     public function createAction(Request $request)
     {
         $name = $this->tool->sanitize($request->request->get('name'));
+        $this->appendDot($name);
         $content = $this->tool->sanitize($request->request->get('content'));
         $recordtype = trim($request->request->get('recordtype'));
         $ttl = $request->request->get('ttl');
@@ -142,6 +143,7 @@ class PdnsController extends Controller
     {
 
         $name = $this->tool->sanitize($request->request->get('name'));
+        $this->appendDot($name);
         $recordtype = trim($request->request->get('recordtype'));
         $content = $this->tool->sanitize($request->request->get('content'));
         $zone_id = $this->tool->sanitize($request->request->get('zonename'));

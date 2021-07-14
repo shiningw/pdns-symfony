@@ -31,7 +31,7 @@ class Utils
 
     public function isRecordType($type)
     {
-        $validTypes = array("A", "AAAA", "CNAME", "MX", "TXT", "SOA", "SPF", "SRV", "PTR");
+        $validTypes = array("A", "AAAA", "CNAME", "MX", "TXT", "SOA", "SPF", "SRV", "PTR","NS");
         $type = strtoupper($type);
         if (in_array($type, $validTypes)) {
             return true;

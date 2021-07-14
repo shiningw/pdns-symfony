@@ -1,43 +1,59 @@
 <?php
 
 namespace Shiningw\PdnsBundle\Zone;
-use Shiningw\PdnsBundle\Zone\Record;
+
 use Shiningw\PdnsBundle\Zone\Comment;
+use Shiningw\PdnsBundle\Zone\Record;
 
-
-class RRSet {
+class RRSet
+{
 
     public function __construct($name = '', $type = '', $content = null, $disabled
-    = FALSE, $ttl = 600, $setptr = FALSE) {
+        = false, $ttl = 600, $setptr = false) {
         $this->name = $name;
         $this->type = $type;
         $this->ttl = $ttl;
         $this->changetype = 'REPLACE';
-        $this->records = Array();
-        $this->comments = Array();
+        $this->records = array();
+        $this->comments = array();
 
         if (isset($content)) {
             $this->addRecord($content, $disabled, $setptr);
         }
     }
-
-    public function delete() {
+    public function setContent(string $oldcontent, string $content)
+    {
+        if (!isset($this->records)) {
+            throw new \Exception("No records to modify!");
+        }
+        foreach ($this->records as $record) {
+            if ($record->content == $oldcontent) {
+                $record->content = $content;
+            }
+        }
+    }
+    public function delete()
+    {
         $this->changetype = 'DELETE';
     }
 
-    public function setTtl($ttl) {
+    public function setTtl($ttl)
+    {
         $this->ttl = $ttl;
     }
 
-    public function setName($name) {
+    public function setName($name)
+    {
         $this->name = $name;
     }
 
-    public function setType($type) {
+    public function setType($type)
+    {
         $this->type = $type;
     }
 
-    public function addRecord($content, $disabled = FALSE, $setptr = FALSE) {
+    public function addRecord($content, $disabled = false, $setptr = false)
+    {
         $content = trim($content);
         foreach ($this->records as $record) {
             if ($record->content == $content) {
@@ -49,7 +65,8 @@ class RRSet {
         array_push($this->records, $record);
     }
 
-    public function deleteRecord($content) {
+    public function deleteRecord($content)
+    {
         foreach ($this->records as $idx => $record) {
             if ($record->content == $content) {
                 unset($this->records[$idx]);
@@ -57,13 +74,15 @@ class RRSet {
         }
     }
 
-    public function addComment($content, $account, $modified_at = FALSE) {
+    public function addComment($content, $account, $modified_at = false)
+    {
         $comment = new Comment($content, $account, $modified_at);
         array_push($this->comments, $comment);
     }
 
-    public function export() {
-        $ret = Array();
+    public function export()
+    {
+        $ret = array();
         $ret['comments'] = $this->exportComments();
         $ret['name'] = $this->name;
         $ret['records'] = $this->exportRecords();
@@ -75,11 +94,12 @@ class RRSet {
         return $ret;
     }
 
-    public function exportRecords() {
-        $ret = Array();
+    public function exportRecords()
+    {
+        $ret = array();
         foreach ($this->records as $record) {
             if ($this->type != "A" and $this->type != "AAAA") {
-                $record->setptr = FALSE;
+                $record->setptr = false;
             }
             array_push($ret, $record->export());
         }
@@ -87,8 +107,9 @@ class RRSet {
         return $ret;
     }
 
-    public function exportComments() {
-        $ret = Array();
+    public function exportComments()
+    {
+        $ret = array();
         foreach ($this->comments as $comment) {
             array_push($ret, $comment->export());
         }

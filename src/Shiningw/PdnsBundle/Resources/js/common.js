@@ -27,6 +27,9 @@
         this.prefix = "";
       }
     },
+    trim:function(string, char){
+     return string.split(char).filter(Boolean).join(char);
+    },
     getZoneId: function () {
       this.zone_selector = "table";
       this.zone_prefix = "-";
