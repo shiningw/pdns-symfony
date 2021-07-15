@@ -10,7 +10,7 @@
       }
     },
     inherit: function (Child, Parent) {
-      var F = function () {};
+      var F = function () { };
       F.prototype = Parent.prototype;
       Child.prototype = new F();
       Child.prototype.constructor = Child;
@@ -27,8 +27,11 @@
         this.prefix = "";
       }
     },
-    trim:function(string, char){
-     return string.split(char).filter(Boolean).join(char);
+    trim: function (string, char) {
+      return string.split(char).filter(Boolean).join(char);
+    },
+    ucfirst: function (string) {
+      return string.charAt(0).toUpperCase() + string.slice(1);
     },
     getZoneId: function () {
       this.zone_selector = "table";
@@ -70,14 +73,14 @@
         data: this.data,
         dataType: 'json',
         url: this.url,
-        error:function(xhr,textStatus, error){
+        error: function (xhr, textStatus, error) {
           console.log(xhr.responseText);
         },
       });
-     
+
       var resHandler = $.proxy(function (data, textStatus, xhr) {
         if (data.code >= 200 && data.code <= 204) {
-          
+
           $.pdns.message.show(".pdns-status-message", data.msg);
           if (
             this.successHandler !== undefined &&
@@ -129,8 +132,9 @@
     constructor: Tablerow,
     init: function () {
       //$.fn.popupform.defaults.input.push({name: 'ttl', text: 'TTL', type: 'text'});
-      $(this.options.target).on(
+      $("body").on(
         "click.tablerow.addrow",
+        this.options.target,
         $.proxy(this.render, this)
       );
       var saveHandler = function (e, formdata) {
@@ -160,7 +164,7 @@
       $.pdns.ajax.data = formdata;
       var resp = $.pdns.ajax.post();
       this.formdata = formdata;
-      $.pdns.ajax.successHandler = this.afterSave.bind(this,this.options.saveCallback);
+      $.pdns.ajax.successHandler = this.afterSave.bind(this, this.options.saveCallback);
     },
     afterSave: function (callback) {
       var formdata = this.formdata;
@@ -175,6 +179,20 @@
           } else {
             this.$newrowTpl.find(selector).text(formdata[key]);
           }
+        }
+      }
+      //let children = this.$newrowTpl[0].children;
+      //update data parameters accordingly so that the new row can be deleted without reloading the page
+      let links = this.$newrowTpl[0].querySelectorAll("a");
+      for (let i = 0; i < links.length; i++) {
+         let link = links[i];
+        if (link.hasAttribute("data-pk")) {
+            let data = link.getAttribute("data-pk");
+            let pk = JSON.parse(data);
+            pk.content = formdata['content'];
+            pk.name = formdata['name'];
+            pk.ttl = formdata['ttl'];
+            link.setAttribute("data-pk", JSON.stringify(pk));
         }
       }
       this.$tbody.prepend(this.$newrowTpl);
@@ -294,7 +312,7 @@
       var selectList = document.createElement("select");
       selectList.id = options.id;
       selectList.name = options.id;
-  
+
       for (var i = 0; i < options.data.length; i++) {
         var option = document.createElement("option");
         option.value = options.data[i].value;
@@ -345,8 +363,8 @@
       </div>\
       <div class="popup-footer">\
         <div class="btn-container">\
-        <button type="button" class="popup-cancel btn btn-warning">cancel</button>\
-        <button type="submit" class="popup-submit btn btn-primary">save</button>\
+        <button type="button" class="popup-cancel btn">Cancel</button>\
+        <button type="submit" class="popup-submit btn btn-primary">Save</button>\
         </div>\
       </div>\
     </div>\
@@ -366,7 +384,7 @@
     name: "content",
     type: "text",
     text: "DNS Value",
-    value: "10.10.10.10",
+    value: "8.8.8.8",
   });
   input.push({ name: "ttl", type: "text", text: "TTL Value", value: 600 });
   input.push({ name: "name", type: "text", text: "DNS Name" });
@@ -456,7 +474,7 @@
 				<td class="name" title="secondary domain name"><input id="name" class="inline-inputname" type="text" value="" ></td>\
 				<td class="recordtype"><select class="dns-options" id="recordtype"><option>A</option><option>AAAA</option><option>CNAME</option><option>MX</option><option>NS</option><option>TXT</option></select></td>\
 				<td class="ttl" ><input id="ttl" type="text" value="600"></td>\
-				<td class="content"><input id="content" type="text" value="10.10.10.10"></td>\
+				<td class="content"><input id="content" type="text" value="8.8.8.8"></td>\
 				<td class="actions">\
 				</tr>';
   $.fn.inlineform.defaults.cancelButton =
@@ -486,6 +504,12 @@
       this.$element = $(this.element);
       this.$tpl = $(this.options.msgTpl);
       this.$yesbtn = $(this.options.yesbutton);
+      this.addbutton = this.options.addbutton;
+      var msg = document.createTextNode(this.options.message);
+      var para = document.createElement("h4");
+      para.classList.add("text-warning");
+      para.appendChild(msg);
+      this.$message = $(para);
       this.$nobtn = $(this.options.nobutton);
       this.selector = this.options.selector;
       this.$removebtn = this.$element.find(this.selector);
@@ -509,6 +533,7 @@
       var that = this;
       this.$tpl.find(".btn-container").append(this.$nobtn);
       this.$tpl.find(".btn-container").append(this.$yesbtn);
+      this.$tpl.find(".popup-header").append(this.$message);
       var $target = $(e.target);
       var $currentRow = $target.closest("tr");
       this.$selectedRow = $currentRow;
@@ -519,6 +544,7 @@
       this.$element.on("click.pdnsconfirm.yes", ".popup-confirm", function (e) {
         that.$element.triggerHandler("confirm.pdnsconfirm", [$currentRow]);
       });
+
     },
     confirm: function (e, $tablerow) {
       var data = this.getData();
@@ -543,6 +569,10 @@
     },
     remove: function () {
       this.removePopup();
+      if (this.$selectedRow.hasClass("last-row")) {
+        var prev = this.$selectedRow.prev()[0].childNodes;
+        this.addButton(prev);
+      }
       this.$selectedRow.remove();
       this.removeTable();
     },
@@ -552,6 +582,17 @@
     removePopup: function (e) {
       this.removeTable();
       this.$tpl.remove();
+    },
+    addButton: function (prev) {
+      var addBtn = this.createNodeFromHtml(this.addbutton);
+      for (let i = 0; i < prev.length; i++) {
+        if (prev[i].className == "actions") {
+          prev[i].appendChild(addBtn);
+        }
+      }
+    },
+    createNodeFromHtml: function (html) {
+      return document.createRange().createContextualFragment(html);
     },
     //tablecells must be an object literal keyed by heading,eg{name:'myname','test':'true'}
     createTable: function (tablecells) {
@@ -568,7 +609,8 @@
           continue;
         }
         var headCell = headRow.insertCell();
-        var headText = document.createTextNode(prop);
+        var text = $.pdns.ucfirst(prop)
+        var headText = document.createTextNode(text);
         headCell.appendChild(headText);
 
         var dataCell = dataRow.insertCell();
@@ -600,7 +642,7 @@
   };
   PdnsConfirm.defaults.msgTpl =
     '\
-<div class="popup-container" >\
+<div id="responsive" class="popup-container" >\
     <div class="popup-content">\
      <div class="popup-header">\
      </div>\
@@ -615,7 +657,9 @@
   PdnsConfirm.defaults.yesbutton =
     '<button type="submit" class="popup-confirm btn btn-primary">Confirm</button>';
   PdnsConfirm.defaults.nobutton =
-    '<button type="button" class="popup-cancel btn btn-warning">Cancel</button>';
+    '<button type="button" class="popup-cancel btn">Cancel</button>';
+  PdnsConfirm.defaults.message = "Are you sure to delete the following data?";
+  PdnsConfirm.defaults.addbutton = '<button type="button" class="new-record btn btn-default"><span class="glyphicon glyphicon-plus">Add</span></button>';
 
   var Plugin = function (option) {
     return this.each(function () {

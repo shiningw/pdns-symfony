@@ -101,10 +101,18 @@ body {
 .popup-footer .btn-container {
     padding-left:35%;
 }
+.btn-container > button {
+    margin-left:0.2em;
+ }
+
 
 .popup-header {
     padding: 15px;
     border-bottom: 1px solid #e5e5e5;
+}
+
+.popup-header > h4,h3 {
+    text-align: center;
 }
 .popup-input label, .popup-input input, .popup-input textarea { 
     margin: .8em auto;
